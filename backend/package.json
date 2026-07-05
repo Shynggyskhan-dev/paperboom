@@ -1,0 +1,22 @@
+{
+  "name": "paperboom-backend",
+  "version": "1.0.0",
+  "description": "PaperBoom wholesale catalog backend",
+  "main": "server.js",
+  "scripts": {
+    "init-db": "node db/init.js",
+    "seed": "node db/seed.js",
+    "seed:csv": "node db/seed-csv.js",
+    "setup": "node db/init.js && node db/seed-csv.js",
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.6",
+    "csv-parser": "^3.2.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "sql.js": "^1.14.1"
+  }
+}

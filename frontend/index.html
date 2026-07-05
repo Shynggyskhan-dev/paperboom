@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <link rel="icon" href="data:,">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Boom — Оптовая одноразовая посуда</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .product-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .product-card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
+        .fav-btn.active i { color: #ef4444; }
+        .fav-btn i { transition: color 0.15s ease; }
+        #cart-drawer { transition: transform 0.3s ease; }
+        .modal-hidden { display: none !important; }
+        input[type="search"]::-webkit-search-cancel-button { display: none; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .accordion-panel { transition: max-height 0.25s ease; overflow: hidden; }
+        .accordion-toggle.open i.fa-chevron-down { transform: rotate(180deg); }
+        .accordion-toggle i.fa-chevron-down { transition: transform 0.2s ease; }
+
+        #catalog-drawer-mobile, #user-drawer { transition: transform 0.3s ease; }
+        #catalog-drawer-mobile.open { transform: translateX(0); }
+        #user-drawer.open { transform: translateX(0); }
+
+        .unit-btn.active { background: white; color: #111827; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+
+        .cart-trash-btn { color: #d1d5db; transition: color 0.15s ease; }
+        .cart-trash-btn:hover { color: #ef4444; }
+
+        .pill-btn.active { background-color: #f97316; color: white; border-color: #f97316; }
+        .pill-btn:not(.active) { background-color: white; color: #4b5563; border-color: #e5e7eb; }
+
+        @media (min-width: 1024px) {
+            #catalog-megamenu { top: 121px; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+<!-- ═══════════════════════════════════════════ HEADER -->
+<header class="bg-white shadow-sm sticky top-0 z-50 border-b">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+
+        <!-- LEFT: Hamburger -> Catalog Drawer -->
+        <button onclick="openCatalogDrawer()"
+            class="w-11 h-11 flex items-center justify-center rounded-2xl border border-gray-200 hover:bg-gray-50 text-gray-700 shrink-0"
+            aria-label="Открыть каталог">
+            <i class="fa-solid fa-bars text-lg"></i>
+        </button>
+
+        <!-- CENTER: Logo -->
+        <button onclick="goHome()" class="flex items-center gap-3 shrink-0">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 bg-orange-500 rounded-3xl flex items-center justify-center text-2xl sm:text-3xl">📦</div>
+            <div class="text-xl sm:text-3xl font-bold hidden xs:block">Paper <span class="text-orange-500">Boom</span></div>
+        </button>
+
+        <!-- Search (desktop inline) -->
+        <div class="flex-1 max-w-xl relative hidden md:block">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input id="search-input" type="search" placeholder="Поиск по названию или артикулу..."
+                class="w-full pl-11 pr-10 py-3 border border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:border-orange-400 focus:outline-none text-sm transition-colors"
+                autocomplete="off">
+            <button id="search-clear" onclick="clearSearch()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- RIGHT: Search icon (mobile) + Profile + Cart -->
+        <div class="flex items-center gap-2 shrink-0">
+            <button onclick="toggleMobileSearch()" class="md:hidden w-11 h-11 flex items-center justify-center rounded-2xl hover:bg-gray-50 text-gray-700">
+                <i class="fa-solid fa-magnifying-glass text-lg"></i>
+            </button>
+
+            <button onclick="openUserDrawer()" class="w-11 h-11 flex items-center justify-center rounded-2xl border border-gray-200 hover:bg-gray-50 text-gray-700 relative">
+                <i class="fa-regular fa-user text-lg"></i>
+                <span id="profile-dot" class="hidden absolute top-2 right-2.5 w-2 h-2 bg-orange-500 rounded-full"></span>
+            </button>
+
+            <button onclick="toggleCart()" class="hidden lg:flex w-11 h-11 items-center justify-center rounded-2xl border border-gray-200 hover:bg-gray-50 text-gray-700 relative">
+                <i class="fa-solid fa-cart-shopping text-lg"></i>
+                <span id="cart-count" class="absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-[11px] w-5 h-5 rounded-full flex items-center justify-center font-bold">0</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile search row -->
+    <div id="mobile-search-row" class="md:hidden hidden px-4 pb-4 relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-8 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        <input id="search-input-mobile" type="search" placeholder="Поиск по названию или артикулу..."
+            class="w-full pl-11 pr-10 py-3 border border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:border-orange-400 focus:outline-none text-sm"
+            autocomplete="off">
+        <button onclick="clearSearchMobile()" id="search-clear-mobile" class="absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 hidden">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <!-- Smart filter pills -->
+    <div class="border-t bg-gray-50/60">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex gap-2 overflow-x-auto no-scrollbar">
+            <span class="shrink-0 flex items-center text-xs text-gray-400 font-medium pr-1">
+                <i class="fa-solid fa-sliders mr-1.5"></i>Фильтры:
+            </span>
+            <div id="category-pills" class="flex gap-2 shrink-0">
+                <button onclick="filterByCategory(null)" data-cat=""
+                    class="pill-btn active shrink-0 px-4 py-2 rounded-full border text-sm font-medium">
+                    Все товары
+                </button>
+            </div>
+            <div class="w-px bg-gray-200 shrink-0 mx-1"></div>
+            <div id="volume-pills" class="flex gap-2 shrink-0"></div>
+        </div>
+    </div>
+</header>
+
+
+<!-- ═══════════════════════════════════════════ CATALOG DRAWER -->
+<div id="catalog-overlay" onclick="closeCatalogDrawer()" class="fixed inset-0 bg-black/50 hidden z-[70]"></div>
+
+<aside id="catalog-drawer-mobile"
+    class="lg:hidden fixed top-0 left-0 h-full w-full max-w-sm bg-white shadow-2xl -translate-x-full z-[80] flex flex-col">
+    <div class="p-5 border-b flex items-center justify-between shrink-0">
+        <h2 class="text-xl font-bold flex items-center gap-2">
+            <i class="fa-solid fa-grip text-orange-500"></i> Каталог
+        </h2>
+        <button onclick="closeCatalogDrawer()" class="text-2xl text-gray-400 hover:text-gray-600">✕</button>
+    </div>
+    <div id="catalog-accordion" class="flex-1 overflow-y-auto">
+        <p class="text-sm text-gray-400 text-center py-8">Загрузка каталога...</p>
+    </div>
+</aside>
+
+<div id="catalog-megamenu"
+class="hidden fixed left-0 right-0 top-[120px] bg-white border-b shadow-2xl z-[80] max-h-[70vh] overflow-y-auto">
+    <div class="max-w-7xl mx-auto px-6 py-8">
+        <div id="megamenu-grid" class="grid grid-cols-4 gap-x-8 gap-y-6">
+            <p class="text-sm text-gray-400 col-span-4 text-center py-8">Загрузка каталога...</p>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ USER DRAWER -->
+<div id="user-overlay" onclick="closeUserDrawer()" class="fixed inset-0 bg-black/50 hidden z-[70]"></div>
+
+<aside id="user-drawer"
+    class="fixed top-0 right-0 h-full w-full max-w-sm bg-white shadow-2xl translate-x-full z-[80] flex flex-col">
+
+    <div class="p-5 border-b flex items-center justify-between shrink-0">
+        <h2 class="text-xl font-bold" id="user-drawer-title">Аккаунт</h2>
+        <button onclick="closeUserDrawer()" class="text-2xl text-gray-400 hover:text-gray-600">✕</button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto">
+
+        <!-- LOGGED-OUT -->
+        <div id="auth-panel" class="p-6">
+            <div class="flex gap-2 mb-6 bg-gray-100 rounded-2xl p-1">
+                <button id="tab-login-btn" onclick="switchAuthTab('login')"
+                    class="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-white shadow-sm text-gray-900">Вход</button>
+                <button id="tab-register-btn" onclick="switchAuthTab('register')"
+                    class="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-500">Регистрация</button>
+            </div>
+
+            <div id="login-form">
+                <div id="login-error" class="hidden mb-4 p-3 bg-red-50 text-red-600 rounded-2xl text-sm"></div>
+                <label class="block text-xs font-medium text-gray-500 mb-1.5">Телефон</label>
+                <input id="login-phone" type="tel" placeholder="+7 (___) ___-__-__" maxlength="18"
+                    class="w-full p-4 border rounded-2xl mb-4 focus:outline-none focus:border-orange-400">
+                <label class="block text-xs font-medium text-gray-500 mb-1.5">Пароль</label>
+                <input id="login-pass" type="password" placeholder="Пароль"
+                    class="w-full p-4 border rounded-2xl mb-6 focus:outline-none focus:border-orange-400">
+                <button onclick="loginUser()" class="w-full py-4 bg-orange-500 text-white rounded-3xl font-semibold hover:bg-orange-600">Войти</button>
+            </div>
+
+            <div id="register-form" class="hidden">
+                <div id="reg-error" class="hidden mb-4 p-3 bg-red-50 text-red-600 rounded-2xl text-sm"></div>
+                <label class="block text-xs font-medium text-gray-500 mb-1.5">Имя или название компании</label>
+                <input id="reg-name" type="text" placeholder="ТОО Ваша компания"
+                    class="w-full p-4 border rounded-2xl mb-4 focus:outline-none focus:border-orange-400">
+                <label class="block text-xs font-medium text-gray-500 mb-1.5">Телефон</label>
+                <input id="reg-phone" type="tel" placeholder="+7 (___) ___-__-__" maxlength="18"
+                    class="w-full p-4 border rounded-2xl mb-4 focus:outline-none focus:border-orange-400">
+                <label class="block text-xs font-medium text-gray-500 mb-1.5">Пароль</label>
+                <input id="reg-pass" type="password" placeholder="Минимум 6 символов"
+                    class="w-full p-4 border rounded-2xl mb-6 focus:outline-none focus:border-orange-400">
+                <button onclick="registerUser()" class="w-full py-4 bg-orange-500 text-white rounded-3xl font-semibold hover:bg-orange-600">Зарегистрироваться</button>
+            </div>
+        </div>
+
+        <!-- LOGGED-IN -->
+        <div id="dashboard-panel" class="hidden">
+            <div class="p-6 border-b bg-gray-50/60">
+                <div class="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-user text-orange-500 text-xl"></i>
+                </div>
+                <div id="dashboard-user-name" class="font-bold text-gray-900 truncate"></div>
+                <div id="dashboard-user-phone" class="text-sm text-gray-400 truncate"></div>
+            </div>
+            <nav class="py-2">
+                <button onclick="showFavoritesModal(); closeUserDrawer();"
+                    class="w-full text-left px-6 py-4 text-sm font-medium text-gray-700 hover:bg-orange-50 hover:text-orange-600 flex items-center gap-3 transition-colors">
+                    <i class="fa-regular fa-heart w-5 text-center"></i> Мои избранные
+                </button>
+                <button onclick="showOrders(); closeUserDrawer();"
+                    class="w-full text-left px-6 py-4 text-sm font-medium text-gray-700 hover:bg-orange-50 hover:text-orange-600 flex items-center gap-3 transition-colors">
+                    <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i> История заказов
+                </button>
+                <div class="border-t my-2"></div>
+                <button onclick="logoutUser(); closeUserDrawer();"
+                    class="w-full text-left px-6 py-4 text-sm font-medium text-red-500 hover:bg-red-50 flex items-center gap-3 transition-colors">
+                    <i class="fa-solid fa-right-from-bracket w-5 text-center"></i> Выйти
+                </button>
+            </nav>
+        </div>
+
+    </div>
+</aside>
+
+
+<!-- ═══════════════════════════════════════════ MAIN CONTENT -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+
+    <div id="categories-section" class="hidden lg:block">
+        <h2 class="text-2xl font-bold mb-5">Каталог товаров</h2>
+        <div id="categories" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8"></div>
+    </div>
+
+    <div id="active-filter-bar" class="hidden flex items-center justify-between mb-5">
+        <div class="flex items-center gap-2">
+            <span id="active-filter-label" class="text-xl font-semibold text-gray-800"></span>
+            <span id="result-count" class="text-sm text-gray-400 font-normal"></span>
+        </div>
+        <button onclick="resetAllFilters()" class="text-sm text-orange-500 hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-xmark text-xs"></i> Сбросить
+        </button>
+    </div>
+
+    <div id="products-loading" class="hidden grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div class="bg-white rounded-3xl border p-5 animate-pulse" style="height:320px"></div>
+        <div class="bg-white rounded-3xl border p-5 animate-pulse" style="height:320px"></div>
+        <div class="bg-white rounded-3xl border p-5 animate-pulse" style="height:320px"></div>
+        <div class="bg-white rounded-3xl border p-5 animate-pulse" style="height:320px"></div>
+    </div>
+
+    <div id="products-empty" class="hidden text-center py-24">
+        <div class="text-6xl mb-4">🔍</div>
+        <p class="text-xl font-semibold text-gray-700 mb-2">Ничего не найдено</p>
+        <p class="text-gray-400 text-sm mb-6">Попробуйте другой запрос или сбросьте фильтры</p>
+        <button onclick="resetAllFilters()" class="px-6 py-3 bg-orange-500 text-white rounded-2xl font-medium">Показать все товары</button>
+    </div>
+
+    <div id="products-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-24 lg:pb-0"></div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ CART -->
+<div id="cart-sticky-bar" class="lg:hidden hidden fixed bottom-0 left-0 right-0 z-40 p-3">
+    <button onclick="toggleCart()"
+        class="w-full bg-gray-900 text-white rounded-3xl shadow-2xl px-5 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <i class="fa-solid fa-cart-shopping text-lg"></i>
+                <span id="cart-count-mobile" class="absolute -top-2 -right-2 bg-orange-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">0</span>
+            </div>
+            <span class="text-sm font-medium">Корзина</span>
+        </div>
+        <span id="total-sum-mobile" class="font-bold text-orange-400">0 ₸</span>
+    </button>
+</div>
+
+<div id="cart-drawer" class="fixed top-0 right-0 h-full w-full lg:w-[420px] bg-white shadow-2xl translate-x-full z-50 flex flex-col">
+    <div class="p-6 border-b flex justify-between items-center shrink-0">
+        <h2 class="text-2xl font-bold">Корзина</h2>
+        <button onclick="toggleCart()" class="text-3xl text-gray-400 hover:text-gray-600">✕</button>
+    </div>
+    <div id="cart-items" class="flex-1 p-6 overflow-auto"></div>
+    <div class="p-6 border-t shrink-0 bg-white">
+        <div class="flex justify-between text-2xl font-bold mb-6">
+            <span>Итого:</span>
+            <span id="total-sum" class="text-orange-500">0 ₸</span>
+        </div>
+        <button onclick="sendToWhatsApp()" id="whatsapp-btn"
+            class="w-full py-5 bg-green-500 text-white rounded-3xl font-semibold flex items-center justify-center gap-3 hover:bg-green-600 transition-colors disabled:opacity-60">
+            <i class="fa-brands fa-whatsapp text-2xl"></i>
+            <span id="whatsapp-btn-text">Отправить в WhatsApp</span>
+        </button>
+    </div>
+</div>
+<div id="cart-overlay" onclick="toggleCart()" class="fixed inset-0 bg-black/40 hidden z-40"></div>
+
+
+<!-- ═══════════════════════════════════════════ ORDERS / FAVORITES MODALS -->
+<div id="orders-modal" class="modal-hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4">
+    <div class="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[85vh] flex flex-col">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-bold">История заказов</h3>
+            <button onclick="hideOrders()" class="text-3xl text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+        <div id="orders-content" class="flex-1 overflow-auto pr-1"></div>
+    </div>
+</div>
+
+<div id="favorites-modal" class="modal-hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4">
+    <div class="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[85vh] flex flex-col">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-bold flex items-center gap-3">
+                <i class="fa-solid fa-heart text-red-400"></i> Моё избранное
+            </h3>
+            <button onclick="hideFavoritesModal()" class="text-3xl text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+        <div id="favorites-content" class="flex-1 overflow-auto pr-1"></div>
+    </div>
+</div>
+
+<div id="toast" class="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-2xl text-sm font-medium z-[200] opacity-0 transition-opacity pointer-events-none">
+    Сообщение
+</div>
+
+<!-- ═══════════════════════════════════════════ JAVASCRIPT PLACEHOLDER -->
+<!-- DO NOT REMOVE THIS COMMENT — JS continues in the next file part -->
+<script>
+// ════════════════════════════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════════════════════════════
+const API          = 'http://localhost:3000/api';
+const WHATSAPP_NUM = '77078088487'; // ← замените на ваш номер WhatsApp
+
+// ════════════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════════════
+let cart         = [];   // { productId, article, name, unit, unitLabel, unitPrice, qty, image_url }
+let currentUser  = null;
+let favorites    = new Set();   // Set of product IDs (integers)
+let allProducts  = [];
+let categoryTree = [];   // [{ category, subcategories: [...] }]
+let searchTimer  = null;
+
+const filters = { search: '', category: '', subcategory: '', volume: '' };
+
+// ════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════════════════
+function authHeaders() {
+    const token = localStorage.getItem('token');
+    return token
+        ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        : { 'Content-Type': 'application/json' };
+}
+
+function showToast(msg, duration = 2800) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.style.opacity = '1';
+    setTimeout(() => { el.style.opacity = '0'; }, duration);
+}
+
+function showError(elId, msg) {
+    const el = document.getElementById(elId);
+    el.textContent = msg;
+    el.classList.remove('hidden');
+}
+function clearError(elId) { document.getElementById(elId).classList.add('hidden'); }
+
+function fmtMoney(n) { return Math.round(n * 10) / 10; }
+
+// ════════════════════════════════════════════════════════════════════════
+// PHONE MASK  — strict +7 (XXX) XXX-XX-XX, vanilla JS, no library
+// ════════════════════════════════════════════════════════════════════════
+function applyPhoneMask(input) {
+    input.addEventListener('input', function (e) {
+        let digits = input.value.replace(/\D/g, '');
+
+        // Force leading 7 (Kazakhstan/Russia country code)
+        if (digits.startsWith('8')) digits = '7' + digits.slice(1);
+        if (!digits.startsWith('7')) digits = '7' + digits;
+        digits = digits.slice(0, 11); // 7 + 10 digits max
+
+        let formatted = '+7';
+        const rest = digits.slice(1);
+
+        if (rest.length > 0) formatted += ' (' + rest.slice(0, 3);
+        if (rest.length >= 3) formatted += ')';
+        if (rest.length >= 4) formatted += ' ' + rest.slice(3, 6);
+        if (rest.length >= 7) formatted += '-' + rest.slice(6, 8);
+        if (rest.length >= 9) formatted += '-' + rest.slice(8, 10);
+
+        input.value = formatted;
+    });
+
+    input.addEventListener('focus', function () {
+        if (!input.value) input.value = '+7 (';
+    });
+
+    input.addEventListener('keydown', function (e) {
+        // Allow backspace to delete formatting characters smoothly
+        if (e.key === 'Backspace' && input.value.length <= 4) {
+            input.value = '';
+        }
+    });
+}
+
+function initPhoneMasks() {
+    ['login-phone', 'reg-phone'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) applyPhoneMask(el);
+    });
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// DRAWERS — Catalog (mobile accordion / desktop mega-menu) + User
+// ════════════════════════════════════════════════════════════════════════
+function openCatalogDrawer() {
+    if (window.innerWidth >= 1024) {
+        // Desktop: toggle mega-menu
+        const menu = document.getElementById('catalog-megamenu');
+        const isOpen = !menu.classList.contains('hidden');
+        closeAllOverlays();
+        if (!isOpen) {
+            menu.classList.remove('hidden');
+            document.getElementById('catalog-overlay').classList.remove('hidden');
+        }
+    } else {
+        closeAllOverlays();
+        document.getElementById('catalog-overlay').classList.remove('hidden');
+        document.getElementById('catalog-drawer-mobile').classList.add('open');
+    }
+}
+
+function closeCatalogDrawer() {
+    document.getElementById('catalog-overlay').classList.add('hidden');
+    document.getElementById('catalog-drawer-mobile').classList.remove('open');
+    document.getElementById('catalog-megamenu').classList.add('hidden');
+}
+
+function openUserDrawer() {
+    closeAllOverlays();
+    document.getElementById('user-overlay').classList.remove('hidden');
+    document.getElementById('user-drawer').classList.add('open');
+}
+
+function closeUserDrawer() {
+    document.getElementById('user-overlay').classList.add('hidden');
+    document.getElementById('user-drawer').classList.remove('open');
+}
+
+function closeAllOverlays() {
+    closeCatalogDrawer();
+    document.getElementById('user-overlay').classList.add('hidden');
+    document.getElementById('user-drawer').classList.remove('open');
+}
+
+function goHome() {
+    closeAllOverlays();
+    resetAllFilters();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Build catalog accordion (mobile) + mega-menu (desktop) ────────────────
+function renderCatalogNav(tree) {
+    // Mobile accordion
+    const accordion = document.getElementById('catalog-accordion');
+    accordion.innerHTML = tree.map((c, idx) => `
+        <div class="border-b">
+            <button onclick="toggleAccordion(${idx})" id="acc-toggle-${idx}"
+                class="accordion-toggle w-full flex items-center justify-between px-5 py-4 text-left font-semibold text-gray-800 hover:bg-gray-50">
+                <span>${c.category}</span>
+                <i class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
+            </button>
+            <div class="accordion-panel hidden bg-gray-50/60" id="acc-panel-${idx}">
+                <button onclick="filterByCategory('${escapeAttr(c.category)}'); closeCatalogDrawer();"
+                    class="w-full text-left px-8 py-3 text-sm font-medium text-orange-600 border-t border-gray-100">
+                    Все в категории →
+                </button>
+                ${c.subcategories.map(sub => `
+                    <button onclick="filterBySubcategory('${escapeAttr(c.category)}', '${escapeAttr(sub)}'); closeCatalogDrawer();"
+                        class="w-full text-left px-8 py-3 text-sm text-gray-600 hover:text-orange-600 border-t border-gray-100">
+                        ${sub}
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+
+    // Desktop mega-menu
+    const megaGrid = document.getElementById('megamenu-grid');
+    megaGrid.innerHTML = tree.map(c => `
+        <div>
+            <button onclick="filterByCategory('${escapeAttr(c.category)}'); closeCatalogDrawer();"
+                class="font-bold text-gray-800 hover:text-orange-600 mb-3 text-left block">
+                ${c.category}
+            </button>
+            <div class="space-y-2">
+                ${c.subcategories.map(sub => `
+                    <button onclick="filterBySubcategory('${escapeAttr(c.category)}', '${escapeAttr(sub)}'); closeCatalogDrawer();"
+                        class="block text-sm text-gray-500 hover:text-orange-600 text-left">
+                        ${sub}
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleAccordion(idx) {
+    const toggle = document.getElementById(`acc-toggle-${idx}`);
+    const panel  = document.getElementById(`acc-panel-${idx}`);
+    const isOpen = toggle.classList.contains('open');
+
+    // Close all other accordions (single-open behaviour, cleaner UX)
+    document.querySelectorAll('.accordion-toggle').forEach(t => t.classList.remove('open'));
+    document.querySelectorAll('.accordion-panel').forEach(p => p.classList.add('hidden'));
+
+    if (!isOpen) {
+        toggle.classList.add('open');
+        panel.classList.remove('hidden');
+    }
+}
+
+function escapeAttr(str) {
+    return String(str).replace(/'/g, "\\'");
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// PRODUCTS — fetch, render, B2B unit selection
+// ════════════════════════════════════════════════════════════════════════
+async function fetchProducts() {
+    const params = new URLSearchParams();
+    if (filters.search)      params.set('search',      filters.search);
+    if (filters.category)    params.set('category',    filters.category);
+    if (filters.subcategory) params.set('subcategory', filters.subcategory);
+    if (filters.volume)      params.set('volume',      filters.volume);
+
+    showLoading(true);
+    try {
+        const res   = await fetch(`${API}/products?${params}`);
+        const data  = await res.json();
+        allProducts = data;
+        renderProducts(data);
+        updateActiveFilterBar(data.length);
+    } catch (e) {
+        console.error('fetchProducts:', e);
+        showToast('Ошибка загрузки товаров');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function showLoading(show) {
+    document.getElementById('products-loading').classList.toggle('hidden', !show);
+    document.getElementById('products-grid').classList.toggle('hidden', show);
+}
+
+// Build the list of available units (piece/pack/box) for a product —
+// a unit is only offered if its price is greater than zero.
+function getAvailableUnits(p) {
+    const units = [];
+    if (p.price_piece > 0) units.push({ key: 'piece', label: 'шт', fullLabel: 'шт.', price: p.price_piece, qtyPerUnit: 1 });
+    if (p.price_pack  > 0) units.push({ key: 'pack',  label: 'уп', fullLabel: 'уп.', price: p.price_pack,  qtyPerUnit: p.qty_pack });
+    if (p.price_box   > 0) units.push({ key: 'box',   label: 'кор', fullLabel: 'кор.', price: p.price_box,  qtyPerUnit: p.qty_box });
+    return units;
+}
+
+function renderProducts(products) {
+    const grid  = document.getElementById('products-grid');
+    const empty = document.getElementById('products-empty');
+
+    if (!products.length) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+    }
+    empty.classList.add('hidden');
+
+    grid.innerHTML = products.map(p => {
+        const units = getAvailableUnits(p);
+
+        // Edge case: product has no priced unit at all (all-zero pricing rows from import)
+        if (!units.length) {
+            return `
+            <div class="product-card bg-white rounded-3xl border p-5 relative flex flex-col opacity-60">
+                <div class="h-40 bg-gray-50 rounded-2xl mb-4 flex items-center justify-center">
+                    <i class="fa-solid fa-box-open text-4xl text-gray-200"></i>
+                </div>
+                <div class="text-xs text-gray-400">Арт. ${p.article}</div>
+                <div class="font-medium text-sm mt-1 line-clamp-2 flex-1">${p.name}</div>
+                <div class="mt-4 text-center text-xs text-gray-400 py-2 bg-gray-50 rounded-xl">Цена уточняется</div>
+            </div>`;
+        }
+
+        const defaultUnit = units[0];
+
+        return `
+        <div class="product-card bg-white rounded-3xl border p-5 relative flex flex-col"
+             data-product-id="${p.id}" data-selected-unit="${defaultUnit.key}">
+
+            <!-- Favourite -->
+            <button onclick="toggleFavorite(event, ${p.id})"
+                class="fav-btn absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 z-10 ${favorites.has(p.id) ? 'active' : ''}"
+                data-id="${p.id}" title="${favorites.has(p.id) ? 'Убрать из избранного' : 'В избранное'}">
+                <i class="fa-${favorites.has(p.id) ? 'solid' : 'regular'} fa-heart text-lg ${favorites.has(p.id) ? 'text-red-500' : 'text-gray-300'}"></i>
+            </button>
+
+            <!-- Image / placeholder -->
+            ${p.image_url
+                ? `<img src="${p.image_url}" alt="${p.name}"
+                       class="h-40 w-full object-contain rounded-2xl mb-4 bg-orange-50"
+                       onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                   <div class="h-40 bg-gray-50 rounded-2xl mb-4 items-center justify-center flex-col gap-2 hidden">
+                       <i class="fa-regular fa-image text-3xl text-gray-300"></i>
+                       <span class="text-xs text-gray-300">Нет фото</span>
+                   </div>`
+                : `<div class="h-40 bg-orange-50 rounded-2xl mb-4 flex items-center justify-center">
+                       <i class="fa-solid fa-box-open text-4xl text-orange-200"></i>
+                   </div>`
+            }
+
+            <div class="text-xs text-gray-400">Арт. ${p.article}</div>
+            <div class="font-medium text-sm mt-1 line-clamp-2">${p.name}</div>
+
+            <!-- B2B unit selector — only units with price > 0 are shown -->
+            ${units.length > 1 ? `
+                <div class="unit-selector flex gap-1.5 mt-3 bg-gray-50 rounded-xl p-1">
+                    ${units.map((u, i) => `
+                        <button onclick="selectUnit(${p.id}, '${u.key}')"
+                            class="unit-btn flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors ${i === 0 ? 'active' : 'text-gray-400'}"
+                            data-unit="${u.key}" data-product="${p.id}">
+                            ${u.label}
+                        </button>
+                    `).join('')}
+                </div>
+            ` : `<div class="mt-3 text-xs text-gray-400">Только поштучно</div>`}
+
+            <!-- Price for selected unit -->
+            <div class="mt-3 flex items-end justify-between">
+                <div>
+                    <span class="unit-price text-xl font-bold text-orange-500" id="price-${p.id}">${defaultUnit.price} ₸</span>
+                    <span class="unit-hint text-xs text-gray-400 block" id="hint-${p.id}">
+                        за ${defaultUnit.fullLabel}${defaultUnit.qtyPerUnit > 1 ? ` (${defaultUnit.qtyPerUnit} шт.)` : ''}
+                    </span>
+                </div>
+                <button onclick="addToCart(${p.id})"
+                    class="add-to-cart-btn bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-2xl text-sm font-medium transition-colors">
+                    В корзину
+                </button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function selectUnit(productId, unitKey) {
+    const card = document.querySelector(`[data-product-id="${productId}"]`);
+    if (!card) return;
+    card.dataset.selectedUnit = unitKey;
+
+    const product = allProducts.find(p => p.id === productId);
+    const units   = getAvailableUnits(product);
+    const unit    = units.find(u => u.key === unitKey);
+    if (!unit) return;
+
+    card.querySelectorAll('.unit-btn').forEach(btn => {
+        const active = btn.dataset.unit === unitKey;
+        btn.classList.toggle('active', active);
+        btn.classList.toggle('text-gray-400', !active);
+    });
+
+    document.getElementById(`price-${productId}`).textContent = `${unit.price} ₸`;
+    document.getElementById(`hint-${productId}`).textContent =
+        `за ${unit.fullLabel}${unit.qtyPerUnit > 1 ? ` (${unit.qtyPerUnit} шт.)` : ''}`;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// CATEGORIES / FILTER PILLS
+// ════════════════════════════════════════════════════════════════════════
+async function fetchAndRenderCategories() {
+    try {
+        const res  = await fetch(`${API}/products/categories`);
+        const data = await res.json();
+        categoryTree = data;
+
+        const catIcons = {
+            'ОДНОРАЗОВАЯ ПОСУДА':    '🥤',
+            'ОДНОРАЗОВАЯ УПАКОВКА':  '📦',
+            'ПАКЕТЫ':                '🛍️',
+            'БАРНЫЕ АКСЕССУАРЫ':     '🍸',
+            'ДЛЯ ВЫПЕЧКИ':           '🧁',
+            'ДЛЯ УБОРКИ И ГИГИЕНЫ':  '🧼',
+            'БУМАЖНАЯ ПРОДУКЦИЯ':    '📜',
+            'РАСХОДНИКИ':            '🔧',
+            'БЕЗ КАТЕГОРИИ':         '❔',
+        };
+
+        // Hero category cards
+        document.getElementById('categories').innerHTML = data.map(c => `
+            <div onclick="filterByCategory('${escapeAttr(c.category)}')"
+                 class="bg-white p-6 rounded-3xl border hover:border-orange-300 cursor-pointer text-center transition-colors hover:bg-orange-50 group">
+                <div class="text-4xl mb-3">${catIcons[c.category] || '📦'}</div>
+                <div class="font-semibold text-sm group-hover:text-orange-600">${c.category}</div>
+                <div class="text-xs text-gray-400 mt-1">${c.subcategories.length} подкат.</div>
+            </div>
+        `).join('');
+
+        // Filter pills (header)
+        document.getElementById('category-pills').innerHTML = `
+            <button onclick="filterByCategory(null)" data-cat=""
+                class="pill-btn active shrink-0 px-4 py-2 rounded-full border text-sm font-medium">
+                Все товары
+            </button>
+            ${data.map(c => `
+                <button onclick="filterByCategory('${escapeAttr(c.category)}')" data-cat="${escapeAttr(c.category)}"
+                    class="pill-btn shrink-0 px-4 py-2 rounded-full border text-sm font-medium">
+                    ${c.category}
+                </button>
+            `).join('')}
+        `;
+
+        renderCatalogNav(data);
+    } catch (e) { console.error('fetchCategories:', e); }
+}
+
+async function fetchAndRenderVolumePills() {
+    try {
+        const res  = await fetch(`${API}/products`);
+        const data = await res.json();
+        const volumes = [...new Set(data.map(p => p.volume).filter(Boolean))].sort((a, b) => a - b);
+
+        document.getElementById('volume-pills').innerHTML = volumes.map(v => `
+            <button onclick="onVolumePillClick(${v})" data-vol="${v}"
+                class="pill-btn shrink-0 px-4 py-2 rounded-full border text-sm font-medium">
+                ${v} мл
+            </button>
+        `).join('');
+    } catch (e) { console.error('fetchVolumes:', e); }
+}
+
+function onVolumePillClick(vol) {
+    const already = filters.volume == vol;
+    filters.volume = already ? '' : String(vol);
+    syncPillStates();
+    fetchProducts();
+}
+
+function syncPillStates() {
+    document.querySelectorAll('#category-pills .pill-btn').forEach(btn => {
+        const active = btn.dataset.cat === (filters.category || '');
+        btn.classList.toggle('active', active);
+    });
+    document.querySelectorAll('#volume-pills .pill-btn').forEach(btn => {
+        const active = btn.dataset.vol == filters.volume;
+        btn.classList.toggle('active', active);
+    });
+}
+
+function filterByCategory(cat) {
+    filters.category    = cat || '';
+    filters.subcategory = '';
+    document.getElementById('categories-section').classList.toggle('hidden', !!cat);
+    syncPillStates();
+    fetchProducts();
+}
+
+function filterBySubcategory(cat, sub) {
+    filters.category    = cat;
+    filters.subcategory = sub;
+    document.getElementById('categories-section').classList.add('hidden');
+    syncPillStates();
+    fetchProducts();
+}
+
+function updateActiveFilterBar(count) {
+    const bar   = document.getElementById('active-filter-bar');
+    const label = document.getElementById('active-filter-label');
+    const cnt   = document.getElementById('result-count');
+    const active = filters.search || filters.category || filters.volume;
+
+    bar.classList.toggle('hidden', !active);
+    bar.classList.toggle('flex',   !!active);
+
+    if (filters.subcategory)   label.textContent = filters.subcategory;
+    else if (filters.search)   label.textContent = `Поиск: "${filters.search}"`;
+    else if (filters.category) label.textContent = filters.category;
+    else if (filters.volume)   label.textContent = `${filters.volume} мл`;
+    else                       label.textContent = '';
+
+    cnt.textContent = `${count} товар${count===1 ? '' : count<5 ? 'а' : 'ов'}`;
+}
+
+function resetAllFilters() {
+    filters.search = filters.category = filters.subcategory = filters.volume = '';
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-input-mobile').value = '';
+    document.getElementById('search-clear').classList.add('hidden');
+    document.getElementById('search-clear-mobile').classList.add('hidden');
+    document.getElementById('categories-section').classList.remove('hidden');
+    syncPillStates();
+    fetchProducts();
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// SEARCH (desktop + mobile)
+// ════════════════════════════════════════════════════════════════════════
+function toggleMobileSearch() {
+    const row = document.getElementById('mobile-search-row');
+    row.classList.toggle('hidden');
+    if (!row.classList.contains('hidden')) document.getElementById('search-input-mobile').focus();
+}
+
+function wireSearchInput(inputId, clearId) {
+    const input = document.getElementById(inputId);
+    input.addEventListener('input', function () {
+        const val = this.value.trim();
+        document.getElementById(clearId).classList.toggle('hidden', !val);
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            filters.search = val;
+            document.getElementById('categories-section').classList.toggle('hidden', !!(val || filters.category));
+            fetchProducts();
+            // keep both inputs in sync
+            const other = inputId === 'search-input' ? 'search-input-mobile' : 'search-input';
+            const otherEl = document.getElementById(other);
+            if (otherEl.value !== val) otherEl.value = val;
+        }, 300);
+    });
+}
+
+function clearSearch() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-input-mobile').value = '';
+    document.getElementById('search-clear').classList.add('hidden');
+    document.getElementById('search-clear-mobile').classList.add('hidden');
+    filters.search = '';
+    document.getElementById('categories-section').classList.toggle('hidden', !!filters.category);
+    fetchProducts();
+}
+function clearSearchMobile() { clearSearch(); }
+
+// ════════════════════════════════════════════════════════════════════════
+// CART
+// ════════════════════════════════════════════════════════════════════════
+function addToCart(productId) {
+    const product = allProducts.find(p => p.id === productId);
+    if (!product) return;
+
+    const card = document.querySelector(`[data-product-id="${productId}"]`);
+    const unitKey = card ? card.dataset.selectedUnit : 'piece';
+    const units   = getAvailableUnits(product);
+    const unit    = units.find(u => u.key === unitKey) || units[0];
+    if (!unit) return;
+
+    const cartKey = `${productId}__${unit.key}`;
+    const existing = cart.find(i => i.cartKey === cartKey);
+
+    if (existing) {
+        existing.qty++;
+    } else {
+        cart.push({
+            cartKey,
+            productId: product.id,
+            article:   product.article,
+            name:      product.name,
+            image_url: product.image_url,
+            unit:      unit.key,
+            unitLabel: unit.fullLabel,
+            unitPrice: unit.price,
+            qty: 1,
+        });
+    }
+
+    updateCartBadges();
+    renderCart();
+    showToast(`${product.name.split(' ').slice(0,3).join(' ')} — добавлено`);
+}
+
+function changeQty(cartKey, delta) {
+    const item = cart.find(i => i.cartKey === cartKey);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) cart = cart.filter(i => i.cartKey !== cartKey);
+    updateCartBadges();
+    renderCart();
+}
+
+function removeFromCart(cartKey) {
+    cart = cart.filter(i => i.cartKey !== cartKey);
+    updateCartBadges();
+    renderCart();
+}
+
+function cartTotal() {
+    return cart.reduce((a, c) => a + c.unitPrice * c.qty, 0);
+}
+
+function updateCartBadges() {
+    const count = cart.reduce((a, c) => a + c.qty, 0);
+    document.getElementById('cart-count').textContent = count;
+    document.getElementById('cart-count-mobile').textContent = count;
+    document.getElementById('total-sum-mobile').textContent = `${fmtMoney(cartTotal())} ₸`;
+
+    const stickyBar = document.getElementById('cart-sticky-bar');
+    stickyBar.classList.toggle('hidden', count === 0);
+}
+
+function renderCart() {
+    const el    = document.getElementById('cart-items');
+    const total = document.getElementById('total-sum');
+
+    if (!cart.length) {
+        el.innerHTML = `
+            <div class="h-full flex flex-col items-center justify-center text-center text-gray-400 gap-3">
+                <i class="fa-solid fa-cart-shopping text-5xl text-gray-200"></i>
+                <p class="font-medium">Корзина пуста</p>
+                <p class="text-sm">Добавьте товары из каталога</p>
+            </div>`;
+        total.textContent = '0 ₸';
+        return;
+    }
+
+    el.innerHTML = cart.map(item => `
+        <div class="flex gap-4 items-start py-4 border-b last:border-0">
+            <div class="w-14 h-14 bg-orange-50 rounded-xl flex items-center justify-center shrink-0">
+                ${item.image_url
+                    ? `<img src="${item.image_url}" class="w-full h-full object-contain rounded-xl">`
+                    : `<i class="fa-solid fa-box-open text-2xl text-orange-200"></i>`}
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-xs text-gray-400">Арт. ${item.article} · ${item.unitLabel}</div>
+                <div class="text-sm font-medium line-clamp-2">${item.name}</div>
+                <div class="text-orange-500 font-bold mt-1">${item.unitPrice} ₸</div>
+            </div>
+            <div class="flex flex-col items-end gap-2 shrink-0">
+                <button onclick="removeFromCart('${item.cartKey}')" class="cart-trash-btn" title="Удалить">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick="changeQty('${item.cartKey}', -1)" class="w-7 h-7 rounded-full border flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-sm">−</button>
+                    <span class="w-6 text-center font-semibold text-sm">${item.qty}</span>
+                    <button onclick="changeQty('${item.cartKey}', 1)" class="w-7 h-7 rounded-full border flex items-center justify-center text-gray-600 hover:bg-gray-50 font-bold text-sm">+</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    total.textContent = `${fmtMoney(cartTotal())} ₸`;
+}
+
+function toggleCart() {
+    closeAllOverlays();
+    const drawer  = document.getElementById('cart-drawer');
+    const overlay = document.getElementById('cart-overlay');
+    const open    = drawer.classList.contains('translate-x-full');
+    drawer.classList.toggle('translate-x-full', !open);
+    overlay.classList.toggle('hidden', !open);
+    if (open) renderCart();
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// SECURE WHATSAPP CHECKOUT
+// Step 1: POST /api/orders (server re-validates prices, returns DB total)
+// Step 2: build the exact Russian message format, auto-numbered
+// ════════════════════════════════════════════════════════════════════════
+async function sendToWhatsApp() {
+    if (!cart.length) { showToast('Корзина пуста'); return; }
+
+    const btn     = document.getElementById('whatsapp-btn');
+    const btnText = document.getElementById('whatsapp-btn-text');
+    let dbTotal   = null;
+    let dbItems   = null;
+
+    if (currentUser) {
+        btn.disabled = true;
+        btnText.textContent = 'Сохраняем заказ...';
+        try {
+            const res = await fetch(`${API}/orders`, {
+                method:  'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    items: cart.map(i => ({
+                        product_id: i.productId,
+                        unit_type:  i.unit,
+                        quantity:   i.qty,
+                    })),
+                }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                dbTotal = data.total_sum;
+                dbItems = data.items;
+            } else {
+                showToast(data.error || 'Ошибка при сохранении заказа');
+            }
+        } catch (e) {
+            console.error('Order save error:', e);
+            showToast('Сервер недоступен — заказ не сохранён');
+        } finally {
+            btn.disabled = false;
+            btnText.textContent = 'Отправить в WhatsApp';
+        }
+    }
+
+    const total = dbTotal !== null ? dbTotal : cartTotal();
+
+    const unitWord = { piece: 'шт', pack: 'уп', box: 'кор' };
+    const lines = cart.map((item, i) =>
+        `${i + 1}. Арт. ${item.article} - ${item.name} - ${item.qty} ${unitWord[item.unit] || 'шт'}.`
+    );
+
+    const message =
+        `Доброго времени суток! С сайта PaperBoom\n` +
+        `\n` +
+        lines.join('\n') +
+        `\n\n` +
+        `Итого к оплате: ${fmtMoney(total)} ₸`;
+
+    window.open(`https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(message)}`, '_blank');
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// FAVOURITES
+// ════════════════════════════════════════════════════════════════════════
+async function fetchFavorites() {
+    if (!currentUser) return;
+    try {
+        const res  = await fetch(`${API}/favorites`, { headers: authHeaders() });
+        const data = await res.json();
+        favorites  = new Set(data.map(p => p.id));
+    } catch (e) { console.error('fetchFavorites:', e); }
+}
+
+async function toggleFavorite(e, productId) {
+    e.stopPropagation();
+    if (!currentUser) {
+        openUserDrawer();
+        showToast('Войдите, чтобы сохранять избранное');
+        return;
+    }
+    const isFav = favorites.has(productId);
+    try {
+        if (isFav) {
+            await fetch(`${API}/favorites/${productId}`, { method: 'DELETE', headers: authHeaders() });
+            favorites.delete(productId);
+        } else {
+            await fetch(`${API}/favorites`, {
+                method:  'POST',
+                headers: authHeaders(),
+                body:    JSON.stringify({ product_id: productId }),
+            });
+            favorites.add(productId);
+        }
+        const btn = document.querySelector(`.fav-btn[data-id="${productId}"]`);
+        if (btn) {
+            const nowFav = favorites.has(productId);
+            btn.querySelector('i').className = `fa-${nowFav ? 'solid' : 'regular'} fa-heart text-lg ${nowFav ? 'text-red-500' : 'text-gray-300'}`;
+            btn.classList.toggle('active', nowFav);
+            btn.title = nowFav ? 'Убрать из избранного' : 'В избранное';
+        }
+    } catch (err) {
+        console.error('toggleFavorite:', err);
+        showToast('Ошибка. Попробуйте ещё раз.');
+    }
+}
+
+async function showFavoritesModal() {
+    document.getElementById('favorites-modal').classList.remove('modal-hidden');
+    const el = document.getElementById('favorites-content');
+
+    if (!currentUser) {
+        el.innerHTML = `<div class="text-center py-12 text-gray-400">
+            <p class="font-medium">Войдите, чтобы видеть избранное</p>
+        </div>`;
+        return;
+    }
+
+    el.innerHTML = '<p class="text-gray-400 text-sm text-center py-8">Загрузка...</p>';
+    try {
+        const res  = await fetch(`${API}/favorites`, { headers: authHeaders() });
+        const data = await res.json();
+
+        if (!data.length) {
+            el.innerHTML = `<div class="text-center py-12 text-gray-400">
+                <i class="fa-regular fa-heart text-5xl mb-3 block text-gray-200"></i>
+                <p class="font-medium">Избранное пусто</p>
+                <p class="text-sm mt-1">Нажмите ♡ на карточке товара</p>
+            </div>`;
+            return;
+        }
+
+        el.innerHTML = data.map(p => {
+            const units = getAvailableUnits(p);
+            const price = units.length ? units[0].price : null;
+            return `
+            <div class="flex items-center gap-4 py-4 border-b last:border-0">
+                <div class="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0">
+                    ${p.image_url
+                        ? `<img src="${p.image_url}" class="w-full h-full object-contain rounded-2xl">`
+                        : `<i class="fa-solid fa-box-open text-2xl text-orange-200"></i>`}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs text-gray-400">Арт. ${p.article}</div>
+                    <div class="text-sm font-medium line-clamp-1">${p.name}</div>
+                    <div class="text-orange-500 font-bold mt-1">${price !== null ? price + ' ₸' : 'Цена уточняется'}</div>
+                </div>
+                ${price !== null ? `
+                    <button onclick="addToCart(${p.id}); hideFavoritesModal();"
+                        class="shrink-0 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-2xl text-sm font-medium transition-colors">
+                        В корзину
+                    </button>` : ''}
+            </div>`;
+        }).join('');
+    } catch (e) {
+        el.innerHTML = '<p class="text-red-400 text-sm text-center py-4">Ошибка загрузки</p>';
+    }
+}
+
+function hideFavoritesModal() { document.getElementById('favorites-modal').classList.add('modal-hidden'); }
+
+// ════════════════════════════════════════════════════════════════════════
+// AUTH
+// ════════════════════════════════════════════════════════════════════════
+function switchAuthTab(tab) {
+    const loginBtn = document.getElementById('tab-login-btn');
+    const regBtn   = document.getElementById('tab-register-btn');
+    const loginForm = document.getElementById('login-form');
+    const regForm    = document.getElementById('register-form');
+
+    if (tab === 'login') {
+        loginBtn.className = 'flex-1 py-2.5 rounded-xl text-sm font-semibold bg-white shadow-sm text-gray-900';
+        regBtn.className   = 'flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-500';
+        loginForm.classList.remove('hidden');
+        regForm.classList.add('hidden');
+    } else {
+        regBtn.className   = 'flex-1 py-2.5 rounded-xl text-sm font-semibold bg-white shadow-sm text-gray-900';
+        loginBtn.className = 'flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-500';
+        regForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+    }
+}
+
+async function loginUser() {
+    clearError('login-error');
+    const phone    = document.getElementById('login-phone').value;
+    const password = document.getElementById('login-pass').value;
+    try {
+        const res  = await fetch(`${API}/login`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ phone, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) return showError('login-error', data.error || 'Ошибка входа');
+        setCurrentUser(data.user, data.token);
+        closeUserDrawer();
+        showToast(`Добро пожаловать, ${data.user.company_name}!`);
+        await fetchFavorites();
+        fetchProducts();
+    } catch (e) {
+        showError('login-error', 'Сервер недоступен');
+    }
+}
+
+async function registerUser() {
+    clearError('reg-error');
+    const company_name = document.getElementById('reg-name').value;
+    const phone        = document.getElementById('reg-phone').value;
+    const password     = document.getElementById('reg-pass').value;
+    try {
+        const res  = await fetch(`${API}/register`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ company_name, phone, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) return showError('reg-error', data.error || 'Ошибка регистрации');
+        setCurrentUser(data.user, data.token);
+        closeUserDrawer();
+        showToast(`Аккаунт создан. Добро пожаловать, ${data.user.company_name}!`);
+    } catch (e) {
+        showError('reg-error', 'Сервер недоступен');
+    }
+}
+
+function setCurrentUser(user, token) {
+    currentUser = user;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+
+    document.getElementById('profile-dot').classList.remove('hidden');
+    document.getElementById('auth-panel').classList.add('hidden');
+    document.getElementById('dashboard-panel').classList.remove('hidden');
+    document.getElementById('user-drawer-title').textContent = 'Личный кабинет';
+    document.getElementById('dashboard-user-name').textContent  = user.company_name;
+    document.getElementById('dashboard-user-phone').textContent = user.phone;
+}
+
+function logoutUser() {
+    currentUser = null;
+    favorites   = new Set();
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+
+    document.getElementById('profile-dot').classList.add('hidden');
+    document.getElementById('auth-panel').classList.remove('hidden');
+    document.getElementById('dashboard-panel').classList.add('hidden');
+    document.getElementById('user-drawer-title').textContent = 'Аккаунт';
+    switchAuthTab('login');
+
+    fetchProducts();
+    showToast('Вы вышли из аккаунта');
+}
+
+function restoreSession() {
+    const token = localStorage.getItem('token');
+    const user  = localStorage.getItem('user');
+    if (token && user) setCurrentUser(JSON.parse(user), token);
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// ORDER HISTORY
+// ════════════════════════════════════════════════════════════════════════
+async function showOrders() {
+    document.getElementById('orders-modal').classList.remove('modal-hidden');
+    const el = document.getElementById('orders-content');
+
+    if (!currentUser) {
+        el.innerHTML = `<div class="text-center py-12 text-gray-400">
+            <i class="fa-regular fa-clock text-4xl mb-3 block"></i>
+            <p class="font-medium">Войдите, чтобы видеть историю заказов</p>
+        </div>`;
+        return;
+    }
+
+    el.innerHTML = '<p class="text-gray-400 text-sm text-center py-8">Загрузка...</p>';
+    try {
+        const res    = await fetch(`${API}/orders`, { headers: authHeaders() });
+        const orders = await res.json();
+
+        if (!orders.length) {
+            el.innerHTML = `<div class="text-center py-12 text-gray-400">
+                <i class="fa-solid fa-box-open text-4xl mb-3 block text-gray-200"></i>
+                <p class="font-medium">Заказов пока нет</p>
+            </div>`;
+            return;
+        }
+
+        const statusLabel = { new: 'Новый', confirmed: 'Подтверждён', shipped: 'Отправлен', done: 'Выполнен' };
+        const statusColor = { new: 'bg-blue-100 text-blue-700', confirmed: 'bg-yellow-100 text-yellow-700', shipped: 'bg-purple-100 text-purple-700', done: 'bg-green-100 text-green-700' };
+        const unitWord = { piece: 'шт', pack: 'уп', box: 'кор' };
+
+        el.innerHTML = orders.map(o => `
+            <div class="border rounded-2xl p-5 mb-4">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold text-gray-800">Заказ №${o.id}</span>
+                        <span class="text-xs px-2.5 py-1 rounded-full font-medium ${statusColor[o.status] || 'bg-gray-100 text-gray-600'}">
+                            ${statusLabel[o.status] || o.status}
+                        </span>
+                    </div>
+                    <span class="text-sm text-gray-400">${new Date(o.created_at).toLocaleDateString('ru-RU', { day:'numeric', month:'long', year:'numeric' })}</span>
+                </div>
+                ${o.items.map(i => `
+                    <div class="flex justify-between text-sm py-2 border-b last:border-0">
+                        <div>
+                            <span class="text-gray-500 text-xs">Арт. ${i.article || i.product_id}</span>
+                            <p class="text-gray-700">${i.name} × ${i.quantity} ${unitWord[i.unit_type] || 'шт'}.</p>
+                        </div>
+                        <span class="font-medium shrink-0 ml-2">${fmtMoney(i.price_at_purchase * i.quantity)} ₸</span>
+                    </div>
+                `).join('')}
+                <div class="flex justify-between font-bold mt-3 pt-2 text-base">
+                    <span>Итого</span>
+                    <span class="text-orange-500">${o.total_sum} ₸</span>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        el.innerHTML = '<p class="text-red-400 text-sm text-center py-4">Ошибка загрузки</p>';
+    }
+}
+
+function hideOrders() { document.getElementById('orders-modal').classList.add('modal-hidden'); }
+
+// ════════════════════════════════════════════════════════════════════════
+// MODAL BACKDROP CLOSE
+// ════════════════════════════════════════════════════════════════════════
+['orders-modal','favorites-modal'].forEach(id => {
+    document.getElementById(id).addEventListener('click', function(e) {
+        if (e.target === this) this.classList.add('modal-hidden');
+    });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════════════════════════
+async function init() {
+    initPhoneMasks();
+    wireSearchInput('search-input', 'search-clear');
+    wireSearchInput('search-input-mobile', 'search-clear-mobile');
+    restoreSession();
+
+    await fetchAndRenderCategories();
+    await fetchAndRenderVolumePills();
+    if (currentUser) await fetchFavorites();
+    await fetchProducts();
+}
+
+init();
+
+</script>
+
+<script src="src/script.js"></script>
+</body>
+</html>

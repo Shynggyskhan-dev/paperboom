@@ -22,11 +22,8 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 
 // ── Global Middleware ─────────────────────────────────────────────────────────
-app.use(cors({
-  origin: '*',  // Tighten this to your frontend domain in production
-  methods: ['GET', 'POST', 'DELETE', 'PUT', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(cors());
+  
 app.use(express.json());
 
 // ── Serve Frontend ────────────────────────────────────────────────────────────

@@ -2,54 +2,71 @@
  * routes/auth.js
  * POST /api/register  — create account
  * POST /api/login     — authenticate, receive JWT
+ *
+ * Schema (Supabase):
+ *   users(id UUID, email, password_hash, company_name, bin_iin, role, created_at)
  */
 
 const express = require('express');
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
-const db      = require('../db/database');
+const pool    = require('../db/database');
 const { JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
 
-// ── POST /api/register ───────────────────────────────────────────────────────
-// Body: { company_name, phone, password }
+// ── POST /api/register ────────────────────────────────────────────────────────
+// Body: { email, password, company_name, bin_iin (optional) }
 router.post('/register', async (req, res) => {
   try {
-    const { company_name, phone, password } = req.body;
+    const { email, password, company_name, bin_iin } = req.body;
 
-    if (!company_name || !phone || !password) {
-      return res.status(400).json({ error: 'Заполните все поля: company_name, phone, password' });
+    // ── Validation ────────────────────────────────────────────────────────────
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email и пароль обязательны' });
     }
 
-    // Normalize phone: strip everything except digits and leading +
-    const normalizedPhone = phone.replace(/[^\d+]/g, '');
-    if (normalizedPhone.length < 10) {
-      return res.status(400).json({ error: 'Некорректный номер телефона' });
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ error: 'Некорректный формат email' });
     }
 
     if (password.length < 6) {
       return res.status(400).json({ error: 'Пароль должен быть не менее 6 символов' });
     }
 
-    const existing = db.get('SELECT id FROM users WHERE phone = ?', [normalizedPhone]);
-    if (existing) {
-      return res.status(409).json({ error: 'Пользователь с таким номером уже зарегистрирован' });
+    if (bin_iin && bin_iin.trim().length !== 12) {
+      return res.status(400).json({ error: 'БИН/ИИН должен содержать ровно 12 символов' });
     }
 
-    const password_hash = await bcrypt.hash(password, 10);
-    const result = db.run(
-      'INSERT INTO users (company_name, phone, password_hash) VALUES (?, ?, ?)',
-      [company_name.trim(), normalizedPhone, password_hash]
+    // ── Check for duplicate email ─────────────────────────────────────────────
+    const { rows: existing } = await pool.query(
+      'SELECT id FROM users WHERE email = $1',
+      [normalizedEmail]
     );
+    if (existing.length > 0) {
+      return res.status(409).json({ error: 'Пользователь с таким email уже зарегистрирован' });
+    }
 
-    const user = db.get(
-      'SELECT id, company_name, phone, created_at FROM users WHERE id = ?',
-      [result.lastInsertRowid]
+    // ── Hash password and insert ──────────────────────────────────────────────
+    const password_hash = await bcrypt.hash(password, 10);
+
+    const { rows } = await pool.query(
+      `INSERT INTO users (email, password_hash, company_name, bin_iin)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, email, company_name, bin_iin, role, created_at`,
+      [
+        normalizedEmail,
+        password_hash,
+        company_name ? company_name.trim() : null,
+        bin_iin      ? bin_iin.trim()       : null,
+      ]
     );
+    const user = rows[0];
 
     const token = jwt.sign(
-      { id: user.id, phone: user.phone, company_name: user.company_name },
+      { id: user.id, email: user.email, company_name: user.company_name, role: user.role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -61,34 +78,43 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// ── POST /api/login ──────────────────────────────────────────────────────────
-// Body: { phone, password }
+// ── POST /api/login ───────────────────────────────────────────────────────────
+// Body: { email, password }
 router.post('/login', async (req, res) => {
   try {
-    const { phone, password } = req.body;
+    const { email, password } = req.body;
 
-    if (!phone || !password) {
-      return res.status(400).json({ error: 'Введите номер телефона и пароль' });
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Введите email и пароль' });
     }
 
-    const normalizedPhone = phone.replace(/[^\d+]/g, '');
-    const user = db.get('SELECT * FROM users WHERE phone = ?', [normalizedPhone]);
+    const normalizedEmail = email.trim().toLowerCase();
 
+    // Fetch full row including password_hash for bcrypt comparison
+    const { rows } = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [normalizedEmail]
+    );
+    const user = rows[0];
+
+    // Return identical error for both "not found" and "wrong password"
+    // to avoid leaking which emails are registered (timing-safe UX)
     if (!user) {
-      return res.status(401).json({ error: 'Неверный номер телефона или пароль' });
+      return res.status(401).json({ error: 'Неверный email или пароль' });
     }
 
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
-      return res.status(401).json({ error: 'Неверный номер телефона или пароль' });
+      return res.status(401).json({ error: 'Неверный email или пароль' });
     }
 
     const token = jwt.sign(
-      { id: user.id, phone: user.phone, company_name: user.company_name },
+      { id: user.id, email: user.email, company_name: user.company_name, role: user.role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
+    // Strip password_hash before sending — never expose it to the client
     const { password_hash, ...safeUser } = user;
     res.json({ message: 'Вход выполнен', token, user: safeUser });
   } catch (err) {

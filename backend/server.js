@@ -1,16 +1,16 @@
 /**
  * server.js — PaperBoom API Server
- * Express + sql.js (SQLite) + JWT Auth
+ * Express + PostgreSQL (Supabase) + JWT Auth
  *
- * Setup:   npm run setup   (init DB + seed products)
  * Start:   npm run dev
  * Port:    3000  (override with PORT env var)
  */
 
+require('dotenv').config();
+
 const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
-const db      = require('./db/database');
 
 // Route modules
 const authRouter      = require('./routes/auth');
@@ -23,26 +23,35 @@ const PORT = process.env.PORT || 3000;
 
 // ── Global Middleware ─────────────────────────────────────────────────────────
 app.use(cors({
-  origin: 'https://paperboom.vercel.app', // Твой домен фронтенда
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5500',
+    'https://paperboom.vercel.app',
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true
 }));
-  
+
 app.use(express.json());
 
 // ── Serve Frontend ────────────────────────────────────────────────────────────
-// Serves index.html from the sibling "frontend" folder at http://localhost:3000
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 // ── API Routes ────────────────────────────────────────────────────────────────
-app.use('/api', authRouter);                    // POST /api/register, /api/login
-app.use('/api/products', productsRouter);       // GET  /api/products, /api/categories
-app.use('/api/orders',   ordersRouter);         // GET/POST /api/orders   [JWT]
-app.use('/api/favorites', favoritesRouter);     // GET/POST/DELETE /api/favorites [JWT]
+app.use('/api',          authRouter);       // POST /api/register, /api/login
+app.use('/api/products', productsRouter);   // GET  /api/products, /api/products/categories
+app.use('/api/orders',   ordersRouter);     // GET/POST /api/orders   [JWT]
+app.use('/api/favorites', favoritesRouter); // GET/POST/DELETE /api/favorites [JWT]
 
 // ── Health Check ──────────────────────────────────────────────────────────────
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
+app.get('/api/health', async (_req, res) => {
+  try {
+    const pool = require('./db/database');
+    const result = await pool.query('SELECT NOW()');
+    res.json({ status: 'ok', time: result.rows[0].now });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
 });
 
 // ── 404 for unknown API routes ────────────────────────────────────────────────
@@ -57,19 +66,12 @@ app.use((err, _req, res, _next) => {
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-async function start() {
-  await db.connect();
-  app.listen(PORT, () => {
-    console.log('');
-    console.log('🚀  PaperBoom backend started');
-    console.log(`    Frontend:  http://localhost:${PORT}`);
-    console.log(`    API base:  http://localhost:${PORT}/api`);
-    console.log(`    Health:    http://localhost:${PORT}/api/health`);
-    console.log('');
-  });
-}
-
-start().catch(err => {
-  console.error('❌  Failed to start server:', err.message);
-  process.exit(1);
+// pg.Pool connects automatically on first query — no manual connect() needed.
+app.listen(PORT, () => {
+  console.log('');
+  console.log('🚀  PaperBoom backend started');
+  console.log(`    Frontend:  http://localhost:${PORT}`);
+  console.log(`    API base:  http://localhost:${PORT}/api`);
+  console.log(`    Health:    http://localhost:${PORT}/api/health`);
+  console.log('');
 });
